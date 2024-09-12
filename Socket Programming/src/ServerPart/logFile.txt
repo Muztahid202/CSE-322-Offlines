@@ -1,0 +1,45 @@
+Request:
+Timestamp: 2024-09-13 01:58:05
+GET / HTTP/1.1
+----------------------------------------------------
+Response:
+Timestamp: 2024-09-13 01:58:05
+HTTP/1.0 200 OK
+Date: Fri Sep 13 01:58:05 BDT 2024
+Server: Java HTTP Server 1.0
+Content-Type: text/html
+Content-Length: 150
+Connection: close
+
+<html><body><h1>Directory Listing</h1><ul><li><b><i><a href="/dir1/">dir1</a></i></b></li><li><a href="/rose.jpg">rose.jpg</a></li></ul></body></html>
+----------------------------------------------------
+Request:
+Timestamp: 2024-09-13 01:58:34
+GET /dir1/ HTTP/1.1
+----------------------------------------------------
+Response:
+Timestamp: 2024-09-13 01:58:34
+HTTP/1.0 200 OK
+Date: Fri Sep 13 01:58:34 BDT 2024
+Server: Java HTTP Server 1.0
+Content-Type: text/html
+Content-Length: 213
+Connection: close
+
+<html><body><h1>Directory Listing</h1><ul><li><b><i><a href="/dir1//dir2/">dir2</a></i></b></li><li><a href="/dir1//doc1.docx">doc1.docx</a></li><li><a href="/dir1//hello.txt">hello.txt</a></li></ul></body></html>
+----------------------------------------------------
+Request:
+Timestamp: 2024-09-13 01:58:53
+GET /dir1//hello.txt HTTP/1.1
+----------------------------------------------------
+Response:
+Timestamp: 2024-09-13 01:58:53
+HTTP/1.0 200 OK
+Date: Fri Sep 13 01:58:53 BDT 2024
+Server: Java HTTP Server 1.0
+Content-Type: text/plain
+Content-Length: 40
+Connection: close
+
+
+----------------------------------------------------
