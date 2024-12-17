@@ -1268,19 +1268,20 @@ RoutingProtocol::RecvAodv(Ptr<Socket> socket)
 void
 RoutingProtocol::SendRevRequest(Ipv4Address dst, Ipv4Address source)
 {
-    // if (m_rreqCount == m_rreqRateLimit)
-    // {
-    //     Simulator::Schedule(m_rreqRateLimitTimer.GetDelayLeft() + MicroSeconds(100),
-    //                         &RoutingProtocol::SendRevRequest,
-    //                         this,
-    //                         dst,
-    //                         source);
-    //     return;
-    // }
-    // else
-    // {
-    //     m_rreqCount++;
-    // }
+    //it was commented out
+    if (m_rreqCount == m_rreqRateLimit)
+    {
+        Simulator::Schedule(m_rreqRateLimitTimer.GetDelayLeft() + MicroSeconds(100),
+                            &RoutingProtocol::SendRevRequest,
+                            this,
+                            dst,
+                            source);
+        return;
+    }
+    else
+    {
+        m_rreqCount++;
+    }
 
     // creating the RrevreqHeader
     RrevreqHeader revreqHeader;
@@ -1292,8 +1293,9 @@ RoutingProtocol::SendRevRequest(Ipv4Address dst, Ipv4Address source)
     uint16_t ttl = m_ttlStart;
     RoutingTableEntry rt;
     // node found the destination in it's own routing table and it will update necessary fields
-    if (m_routingTable.LookupRoute(dst, rt))
-    {
+    // if (m_routingTable.LookupRoute(dst, rt))
+    // {
+        m_routingTable.LookupRoute(dst, rt);
         if (rt.GetFlag() != IN_SEARCH)
         {
             ttl = std::min<uint16_t>(rt.GetHop() + m_ttlIncrement, m_netDiameter);
@@ -1323,42 +1325,8 @@ RoutingProtocol::SendRevRequest(Ipv4Address dst, Ipv4Address source)
         rt.SetLifeTime(m_pathDiscoveryTime);
         m_routingTable.Update(rt);
         //std::cout<<"dhuksi in if(m_routingTable.LookupRoute(dst, rt)) "<<std::endl;
-    }
-    // // // node didn't find dest in it's routing table and it will create a new dummy entry in the
-    // // routing table
-    // else
-    // {
-    //     std::cout<<"node didn't find dest in it's routing table and it will create a new dummy entry in the"<<std::endl;
-    //     revreqHeader.SetUnknownSeqno(true);
-    //     Ptr<NetDevice> dev = nullptr;
-    //     // dummy routing table entry
-    //     RoutingTableEntry newEntry(/*dev=*/dev,
-    //                                /*dst=*/dst,
-    //                                /*vSeqNo=*/false,
-    //                                /*seqNo=*/0,
-    //                                /*iface=*/Ipv4InterfaceAddress(),
-    //                                /*hops=*/ttl,
-    //                                /*nextHop=*/Ipv4Address(),
-    //                                /*lifetime=*/m_pathDiscoveryTime);
-    //     // Check if TtlStart == NetDiameter
-    //     if (ttl == m_netDiameter)
-    //     {
-    //         newEntry.IncrementRreqCnt();
-    //     }
-    //     newEntry.SetFlag(IN_SEARCH);
-    //     m_routingTable.AddRoute(newEntry);
-    // }
-
-    // if (m_gratuitousReply)
-    // {
-    //     revreqHeader.SetGratuitousRrep(true);
-    // }
-    // if (m_destinationOnly)
-    // {
-    //     revreqHeader.SetDestinationOnly(true);
-    // }
-
-    // revreqHeader.SetUnknownSeqno(true);
+    //}
+   
     // poupulating more fields of the rreq header
     m_seqNo++;
     revreqHeader.SetOriginSeqno(m_seqNo);
@@ -1368,7 +1336,7 @@ RoutingProtocol::SendRevRequest(Ipv4Address dst, Ipv4Address source)
     
 
 
-    // Send RREQ as subnet directed broadcast from each interface used by aodv
+    // Send REVREQ as subnet directed broadcast from each interface used by raodv
     for (auto j = m_socketAddresses.begin(); j != m_socketAddresses.end(); ++j)
     {
         Ptr<Socket> socket = j->first;
@@ -1416,13 +1384,13 @@ RoutingProtocol::RecvRevRequest(Ptr<Packet> p, Ipv4Address receiver, Ipv4Address
 
     //std::cout<<"recvrevreq e aschi"<<std::endl;
 
-    // A node ignores all RREQs received from any node in its blacklist
+    // A node ignores all REVREQs received from any node in its blacklist
     RoutingTableEntry toPrev;
     if (m_routingTable.LookupRoute(src, toPrev))
     {
         if (toPrev.IsUnidirectional())
         {
-            NS_LOG_DEBUG("Ignoring RREQ from node in blacklist");
+            NS_LOG_DEBUG("Ignoring REVREQ from node in blacklist");
             return;
         }
     }
@@ -1431,13 +1399,13 @@ RoutingProtocol::RecvRevRequest(Ptr<Packet> p, Ipv4Address receiver, Ipv4Address
     Ipv4Address origin = rrevreqHeader.GetOrigin();
 
     /*
-     *  Node checks to determine whether it has received a RREQ with the same Originator IP Address
-     * and RREQ ID. If such a RREQ has been received, the node silently discards the newly received
-     * RREQ.
+     *  Node checks to determine whether it has received a REVREQ with the same Originator IP Address
+     * and REVREQ ID. If such a RREQ has been received, the node silently discards the newly received
+     * REVREQ.
      */
     if (m_rreqIdCache.IsDuplicate(origin, id) && !IsMyOwnAddress(rrevreqHeader.GetDst()))
     {
-        NS_LOG_DEBUG("Ignoring RREQ due to duplicate");
+        NS_LOG_DEBUG("Ignoring REVREQ due to duplicate");
         return;
     }
 
@@ -1501,37 +1469,7 @@ RoutingProtocol::RecvRevRequest(Ptr<Packet> p, Ipv4Address receiver, Ipv4Address
         // m_nb.Update (src, Time (AllowedHelloLoss * HelloInterval));
     }
 
-    // RoutingTableEntry toNeighbor;
-    // if (!m_routingTable.LookupRoute(src, toNeighbor))
-    // {
-    //     //std::cout<<"neighbor er if e dhuksi"<<std::endl;
-    //     NS_LOG_DEBUG("Neighbor:" << src << " not found in routing table. Creating an entry");
-    //     Ptr<NetDevice> dev = m_ipv4->GetNetDevice(m_ipv4->GetInterfaceForAddress(receiver));
-    //     RoutingTableEntry newEntry(dev,
-    //                                src,
-    //                                false,
-    //                                rrevreqHeader.GetOriginSeqno(),
-    //                                m_ipv4->GetAddress(m_ipv4->GetInterfaceForAddress(receiver), 0),
-    //                                1,
-    //                                src,
-    //                                m_activeRouteTimeout);
-    //     m_routingTable.AddRoute(newEntry);
-    // }
-    // else
-    // {
-    //     //std::cout<<"neighbor er else e dhuksi"<<std::endl;
-    //     toNeighbor.SetLifeTime(m_activeRouteTimeout);
-    //     toNeighbor.SetValidSeqNo(false);
-    //     toNeighbor.SetSeqNo(rrevreqHeader.GetOriginSeqno());
-    //     toNeighbor.SetFlag(VALID);
-    //     toNeighbor.SetOutputDevice(m_ipv4->GetNetDevice(m_ipv4->GetInterfaceForAddress(receiver)));
-    //     toNeighbor.SetInterface(m_ipv4->GetAddress(m_ipv4->GetInterfaceForAddress(receiver), 0));
-    //     toNeighbor.SetHop(1);
-    //     toNeighbor.SetNextHop(src);
-    //     m_routingTable.Update(toNeighbor);
-    // }
-    // m_nb.Update(src, Time(m_allowedHelloLoss * m_helloInterval));
-
+    //checking if the destination is the current node and then send the packet
     if (IsMyOwnAddress(rrevreqHeader.GetDst()))
     { 
         //std::cout<<"ekhon route established so packet pathabe"<<std::endl;
